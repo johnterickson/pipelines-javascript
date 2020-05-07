@@ -1,25 +1,316 @@
 {
-  "name": "HelloWorld",
-  "private": true,
-  "version": "0.0.0",
-  "description": "Hello World",
-  "main": "server.js",
-  "author": {
-    "name": "",
-    "email": ""
-  },
+  "name": "@rtd/dashboard",
+  "version": "0.1.329",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "dependencies": {
-    "express": "^4.13.3",
-    "mocha": "^3.0.0"
-  },
-  "devDependencies": {
-    "gulp": "^3.9.0",
-    "gulp-mocha": "^2.2.0",
-    "mocha-junit-reporter": "^1.12.0",
-    "gulp-istanbul": "^1.1.3",
-    "nyc": "^12.0.2"
+    "@aspnet/signalr": "^1.1.4",
+    "@axf/adx-utils": "^1.0.5",
+    "@fluentui/react-context-selector": "^0.47.0",
+    "@kusto/kustoweb": "^0.3.70",
+    "@kusto/monaco-kusto": "^2.0.5",
+    "@microsoft/mgt": "^1.2.3",
+    "ag-grid-community": "^21.0.0",
+    "ag-grid-react": "^21.0.0",
+    "fuzzysort": "^1.1.4",
+    "idb": "^4.0.3",
+    "js-yaml": "^3.13.1",
+    "lodash": "^4.17.15",
+    "moment": "^2.24.0",
+    "monaco-editor": "^0.15.6",
+    "msal": "^1.2.0",
+    "office-ui-fabric-react": "^7.93.0",
+    "react-fast-compare": "^2.0.4",
+    "react-grid-layout": "^0.18.3",
+    "react-intersection-observer": "^8.25.2",
+    "react-markdown": "^4.2.2",
+    "react-monaco-editor": "^0.25.1",
+    "react-scripts": "^3.4.1",
+    "react-sizeme": "^2.6.10",
+    "rxjs": "^6.5.5",
+    "uuid": "^3.3.2",
+    "xxhashjs": "^0.2.2"
   },
   "scripts": {
-    "build": "nyc --reporter=cobertura --reporter=html ./node_modules/.bin/mocha tests/**/*.js --reporter mocha-junit-reporter --reporter-options mochaFile=./TEST-RESULTS.xml"
+    "start": "cross-env BROWSER=chrome react-scripts start",
+    "start:build": "npx http-server build -p 3000",
+    "start:test": "cross-env REACT_APP_INTEGRATION=1 react-scripts start",
+    "wait:cypress": "wait-on http://localhost:3000",
+    "wait:storybook": "wait-on http://localhost:9009",
+    "build": "react-scripts build",
+    "lint": "eslint --ext js,ts,tsx src",
+    "lint:fix": "eslint --ext js,ts,tsx src --fix",
+    "cypress": "cross-env NODE_ENV=production cypress run --browser chrome",
+    "cypress:ci": "cross-env NODE_ENV=production cypress run",
+    "cypress:start-and-ci": "start-server-and-test start:test http://localhost:3000 cypress:ci",
+    "cypress:gui": "cross-env NODE_ENV=production cypress open",
+    "cypress:merge": "junit-merge -d cypress/results -o cypress/test.xml",
+    "_comment-test": "Env argument is to fix outdated JSDOM missing methods",
+    "test": "react-scripts test --env=jsdom-fourteen",
+    "test:ci": "cross-env JEST_JUNIT_SUITE_NAME=\"{filename}\" react-scripts test --env=jsdom-fourteen --reporters=jest-junit",
+    "test:debug": "react-scripts --inspect-brk test --runInBand --no-cache --env=jsdom-fourteen",
+    "eject": "react-scripts eject",
+    "_comment-pkgbuild": "Builds the rt-dashboard package for npm distribution",
+    "pkgbuild": "npm run clean && npm run pkgbuild:noremove",
+    "_comment-pkgbuild:noremove": "Builds the rt-dashboard package for npm distribution without removing /dist first",
+    "pkgbuild:noremove": "npm run jsbuild && npm run tsbuild && npm run cssbuild && npm run csscleanupbuild",
+    "_comment-clean": "Deletes the dist folder for a fresh build",
+    "clean": "rimraf ./dist ./build",
+    "_comment-jsbuild": "Builds the TS/JS project and copies all Babel-ignored files",
+    "jsbuild": "cross-env NODE_ENV=production babel src --out-dir dist --copy-files --ignore src/test,src/**/__tests__,src/**/__mocks__,src/stories --extensions .ts,.tsx",
+    "_comment-tsbuild": "Builds the TS definition files and converts all paths to be relative",
+    "tsbuild": "cross-env NODE_ENV=production tsc -p tsconfig-pkg.json && tscpaths -p tsconfig-exclude.json -s ./src -o ./dist",
+    "_comment-cssbuild": "Builds the SASS that is not a CSS module (not in .module.scss)",
+    "cssbuild": "postcss \"./src/**/!(*.module).scss\" --dir ./dist --base src",
+    "_comment-csscleanupbuild": "Cleans up unused or unwanted/badly named CSS artifacts",
+    "csscleanupbuild": "npm run renamecssbuild && npm run removesasssourcemapbuild",
+    "_comment-renamecssbuild": "Renames SASS non-CSS modules (not suffixed with .module.scss) to .css, as they have been compiled",
+    "renamecssbuild": "renamer --find \"/(?<!\\.module)\\.scss$/i\" --replace \".css\" \"./dist/**\" --force",
+    "_comment-removesasssourcemapbuild": "Removes all CSS source maps",
+    "removesasssourcemapbuild": "rimraf \"./dist/**/*.scss.map\"",
+    "storybook": "cross-env STORYBOOK_ISSTORY=true start-storybook -p 9009 -s public",
+    "build-storybook": "cross-env STORYBOOK_ISSTORY=true build-storybook -s public",
+    "storybook:capture": "storycap http://localhost:9009 --captureTimeout 60000 --viewportDelay 1000",
+    "storybook:start-and-ci": "rimraf ./__screenshots__ && start-server-and-test storybook http://localhost:9009 \"npm run storybook:capture && npm run storybook:ci\"",
+    "storybook:ci": "reg-cli __screenshots__ __expectedScreenshots__ __diffs__ --matchingThreshold 0.01 --enableAntialias -R index.html"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.5.5",
+    "@babel/core": "^7.5.5",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.7.4",
+    "@babel/plugin-proposal-optional-chaining": "^7.7.5",
+    "@babel/plugin-transform-typescript": "^7.9.4",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/preset-typescript": "^7.3.3",
+    "@csstools/postcss-sass": "^4.0.0",
+    "@cypress/webpack-preprocessor": "^4.1.1",
+    "@microsoft/applicationinsights-react-js": "^2.5.3",
+    "@microsoft/applicationinsights-web": "^2.5.4",
+    "@storybook/addon-actions": "^5.2.8",
+    "@storybook/addon-knobs": "^5.2.8",
+    "@storybook/addon-links": "^5.2.8",
+    "@storybook/addons": "^5.2.8",
+    "@storybook/preset-create-react-app": "^2.0.0",
+    "@storybook/react": "^5.3.17",
+    "@testing-library/cypress": "^5.0.2",
+    "@testing-library/jest-dom": "^4.0.0",
+    "@testing-library/react": "^9.1.1",
+    "@testing-library/react-hooks": "^2.0.1",
+    "@types/jest": "^24.0.12",
+    "@types/jquery": "^3.3.29",
+    "@types/lodash": "^4.14.123",
+    "@types/node": "^10.12.12",
+    "@types/react": "^16.9.23",
+    "@types/react-dom": "^16.9.5",
+    "@types/react-grid-layout": "0.17.0",
+    "@types/react-router-dom": "^4.3.2",
+    "@types/recharts": "^1.1.16",
+    "@types/uuid": "^3.4.4",
+    "@types/xxhashjs": "^0.2.1",
+    "babel-plugin-module-resolver": "^3.2.0",
+    "babel-plugin-transform-rename-import": "^2.3.0",
+    "cpx": "^1.5.0",
+    "cross-env": "^5.2.0",
+    "cypress": "^3.8.0",
+    "eslint": "^6.5.1",
+    "eslint-config-prettier": "^6.1.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-prettier": "^3.1.0",
+    "fork-ts-checker-webpack-plugin": "^4.1.0",
+    "highcharts": "^7.1.2",
+    "highcharts-react-official": "^2.2.2",
+    "jest-environment-jsdom-fourteen": "^1.0.1",
+    "jest-junit": "^10.0.0",
+    "jest-localstorage-mock": "^2.4.0",
+    "junit-merge": "^2.0.0",
+    "mockdate": "^2.0.5",
+    "node-sass": "^4.13.0",
+    "postcss-cli": "^6.1.3",
+    "postcss-scss": "^2.0.0",
+    "prettier": "^1.19.1",
+    "promise": "8.0.3",
+    "react": "^16.13.0",
+    "react-docgen-typescript-loader": "^3.6.0",
+    "react-dom": "^16.13.0",
+    "react-router-dom": "^5.0.0",
+    "react-test-renderer": "^16.13.0",
+    "recharts": "^1.5.0",
+    "reg-cli": "^0.15.13",
+    "reg-keygen-git-hash-plugin": "^0.8.5",
+    "renamer": "^1.1.3",
+    "rimraf": "^3.0.0",
+    "start-server-and-test": "^1.10.11",
+    "storycap": "^2.3.5",
+    "synchronous-promise": "^2.0.10",
+    "ts-loader": "^6.2.1",
+    "ts-toolbelt": "^6.2.0",
+    "tscpaths": "0.0.9",
+    "typescript": "^3.7.5",
+    "wait-on": "^3.3.0"
+  },
+  "peerDependencies": {
+    "@microsoft/applicationinsights-react-js": "^2.3.0",
+    "@microsoft/applicationinsights-web": "^2.3.0",
+    "highcharts": "^7.1.2",
+    "highcharts-react-official": "^2.2.2",
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0",
+    "react-router-dom": "^5.0.0",
+    "react-test-renderer": "^16.13.0",
+    "recharts": "^1.5.0"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "plugin:@typescript-eslint/recommended",
+      "plugin:prettier/recommended",
+      "prettier/@typescript-eslint"
+    ],
+    "plugins": [
+      "import",
+      "@typescript-eslint"
+    ],
+    "rules": {
+      "prettier/prettier": "warn",
+      "@typescript-eslint/array-type": [
+        "warn",
+        {
+          "default": "array-simple"
+        }
+      ],
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/explicit-member-accessibility": "off",
+      "@typescript-eslint/consistent-type-definitions": "off",
+      "@typescript-eslint/interface-name-prefix": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ],
+      "@typescript-eslint/no-object-literal-type-assertion": "off",
+      "default-param-last": "warn",
+      "import/order": [
+        "warn",
+        {
+          "groups": [
+            "builtin",
+            "external",
+            "internal",
+            "parent",
+            "sibling",
+            "index"
+          ],
+          "pathGroups": [
+            {
+              "pattern": "src/**",
+              "group": "internal",
+              "position": "after"
+            }
+          ],
+          "pathGroupsExcludedImportTypes": []
+        }
+      ],
+      "max-classes-per-file": [
+        "warn",
+        1
+      ],
+      "no-console": "warn",
+      "no-empty": "warn",
+      "no-shadow": "warn",
+      "no-var": "error",
+      "one-var": [
+        "warn",
+        "never"
+      ],
+      "prefer-const": "warn",
+      "spaced-comment": [
+        "warn",
+        "always",
+        {
+          "markers": [
+            "/"
+          ]
+        }
+      ],
+      "yoda": [
+        "warn",
+        "never"
+      ]
+    }
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "src/(.*)$": "<rootDir>/src/$1",
+      "^react-native$": "react-native-web",
+      "office-ui-fabric-react/lib/(.*)$": "office-ui-fabric-react/lib-commonjs/$1",
+      "@uifabric/icons/lib/(.*)$": "@uifabric/icons/lib-commonjs/$1",
+      "@uifabric/merge-styles/lib/(.*)$": "@uifabric/merge-styles/lib-commonjs/$1",
+      "@uifabric/styling/lib/(.*)$": "@uifabric/styling/lib-commonjs/$1",
+      "@uifabric/utilities/lib/(.*)$": "@uifabric/utilities/lib-commonjs/$1",
+      "office-ui-fabric-react/lib": "office-ui-fabric-react/lib-commonjs",
+      "@uifabric/icons/lib": "@uifabric/icons/lib-commonjs",
+      "@uifabric/merge-styles/lib": "@uifabric/merge-styles/lib-commonjs",
+      "@uifabric/styling/lib": "@uifabric/styling/lib-commonjs",
+      "@uifabric/utilities/lib": "@uifabric/utilities/lib-commonjs"
+    }
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env",
+      [
+        "react-app",
+        {
+          "absoluteRuntime": false
+        }
+      ],
+      "@babel/preset-typescript"
+    ],
+    "plugins": [
+      [
+        "module-resolver",
+        {
+          "root": [
+            "./src"
+          ],
+          "alias": {
+            "src": "./src"
+          }
+        }
+      ],
+      [
+        "transform-rename-import",
+        {
+          "original": "^(.+?)(?<!\\.module)\\.scss$",
+          "replacement": "$1.css"
+        }
+      ],
+      "@babel/plugin-proposal-optional-chaining",
+      "@babel/plugin-proposal-nullish-coalescing-operator",
+      "@babel/plugin-transform-typescript"
+    ]
+  },
+  "prettier": {
+    "printWidth": 120,
+    "trailingComma": "all",
+    "tabWidth": 2,
+    "semi": true,
+    "singleQuote": true,
+    "quoteProps": "as-needed",
+    "bracketSpacing": true,
+    "jsxBracketSameLine": false,
+    "arrowParens": "avoid"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
