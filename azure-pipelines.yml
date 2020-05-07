@@ -17,7 +17,7 @@ schedules:
 variables:
   runCodesignValidationInjection: false
   system.debug: true
-  skipComponentGovernanceDetection: false
+  skipComponentGovernanceDetection: true
 
 strategy:
   matrix:
