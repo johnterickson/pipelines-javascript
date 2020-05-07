@@ -14,6 +14,10 @@ schedules:
     - master
   always: true
 
+variables:
+  runCodesignValidationInjection: false
+  system.debug: true
+
 strategy:
   matrix:
     linux:
